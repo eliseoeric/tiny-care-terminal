@@ -2,6 +2,7 @@
 var config = require(__dirname + '/config.js');
 var twitterbot = require(__dirname + '/twitterbot.js');
 var gitbot = require(__dirname + '/gitbot.js');
+var asanabot = require(__dirname + '/asanabot.js');
 var pomodoro = require(__dirname + '/pomodoro.js');
 var ansiArt = require('ansi-art').default;
 
@@ -73,7 +74,7 @@ screen.key(['p', 'C-p'], function(ch, key) {
   if (inPomodoroMode) {
     pomodoroObject.stop();
     inPomodoroMode = false;
-    doTheTweets();
+    // doTheTweets();
     parrotBox.removeLabel('');
   } else {
     parrotBox.setLabel(' 🍅 ');
@@ -91,16 +92,18 @@ var weekBox = grid.set(6, 0, 6, 6, blessed.box, makeScrollBox(' 📝  Week '));
 var commits = grid.set(0, 6, 6, 2, contrib.bar, makeGraphBox('Commits'));
 var parrotBox = grid.set(6, 6, 6, 6, blessed.box, makeScrollBox(''));
 
-var tweetBoxes = {}
-tweetBoxes[config.twitter[1]] = grid.set(2, 8, 2, 4, blessed.box, makeBox(' 💖 '));
-tweetBoxes[config.twitter[2]] = grid.set(4, 8, 2, 4, blessed.box, makeBox(' 💬 '));
+// var tweetBoxes = {}
+// tweetBoxes[config.twitter[1]] = grid.set(2, 8, 2, 4, blessed.box, makeBox(' 💖 '));
+// tweetBoxes[config.twitter[2]] = grid.set(4, 8, 2, 4, blessed.box, makeBox(' 💬 '));
+
+var asanaBox = grid.set(2, 8, 4, 4, blessed.box, makeScrollBox(' Asana Tasks '));
 
 tick();
 setInterval(tick, 1000 * 60 * config.updateInterval);
 
 function tick() {
   doTheWeather();
-  doTheTweets();
+  doTheTasks();
   doTheCodes();
 }
 
@@ -124,6 +127,17 @@ function doTheWeather() {
     } else {
       weatherBox.content = 'Having trouble fetching the weather for you :(';
     }
+  });
+}
+
+function doTheTasks() {
+  // show loading message while loading commits
+  asanaBox.content = '⏳ one second please...tiny asana bot is looking for tiny tasks! ⏳';
+  screen.render();
+
+  asanabot.getTasks().then(function(list) {
+    asanaBox.content = list.map(item => (`- ${item.name}`)).join('\n');
+    screen.render();
   });
 }
 

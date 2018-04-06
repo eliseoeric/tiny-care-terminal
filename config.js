@@ -34,6 +34,12 @@ var config = {
     access_token_secret: process.env.TTC_ACCESS_TOKEN_SECRET || process.env.ACCESS_TOKEN_SECRET || 'none',
   },
 
+  asana: {
+    api_key: process.env.ASANA_API_KEY || 'none',
+    workspace: process.env.ASANA_WORKSPACE || 'none',
+    status: process.env.ASANA_STATUS || 'today',
+  },
+
   // Pomodoro Settings
   runningDuration: process.env.TTC_POMODORO || 20,
   breakDuration: process.env.TTC_BREAK || 5,
