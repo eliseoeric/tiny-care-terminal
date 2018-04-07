@@ -75,6 +75,7 @@ screen.key(['p', 'C-p'], function(ch, key) {
     pomodoroObject.stop();
     inPomodoroMode = false;
     // doTheTweets();
+    doTheTasks();
     parrotBox.removeLabel('');
   } else {
     parrotBox.setLabel(' 🍅 ');
@@ -86,17 +87,17 @@ screen.key(['p', 'C-p'], function(ch, key) {
 var grid = new contrib.grid({rows: 12, cols: 12, screen: screen});
 
 // grid.set(row, col, rowSpan, colSpan, obj, opts)
-var weatherBox = grid.set(0, 8, 2, 4, blessed.box, makeScrollBox(' 🌤 '));
+var weatherBox = grid.set(0, 6, 2, 6, blessed.box, makeScrollBox(' 🌤 '));
 var todayBox = grid.set(0, 0, 6, 6, blessed.box, makeScrollBox(' 📝  Last 24 hours '));
 var weekBox = grid.set(6, 0, 6, 6, blessed.box, makeScrollBox(' 📝  Week '));
-var commits = grid.set(0, 6, 6, 2, contrib.bar, makeGraphBox('Commits'));
-var parrotBox = grid.set(6, 6, 6, 6, blessed.box, makeScrollBox(''));
+var commits = grid.set(6, 6, 6, 2, contrib.bar, makeGraphBox('Commits'));
+var parrotBox = grid.set(6, 8, 6, 4, blessed.box, makeScrollBox(''));
 
 // var tweetBoxes = {}
 // tweetBoxes[config.twitter[1]] = grid.set(2, 8, 2, 4, blessed.box, makeBox(' 💖 '));
 // tweetBoxes[config.twitter[2]] = grid.set(4, 8, 2, 4, blessed.box, makeBox(' 💬 '));
 
-var asanaBox = grid.set(2, 8, 4, 4, blessed.box, makeScrollBox(' Asana Tasks '));
+var asanaBox = grid.set(2, 6, 4, 6, blessed.box, makeScrollBox(' Asana Tasks '));
 
 tick();
 setInterval(tick, 1000 * 60 * config.updateInterval);
@@ -104,6 +105,7 @@ setInterval(tick, 1000 * 60 * config.updateInterval);
 function tick() {
   doTheWeather();
   doTheTasks();
+  doTheParrot();
   doTheCodes();
 }
 
@@ -139,6 +141,12 @@ function doTheTasks() {
     asanaBox.content = list.map(item => (`- ${item.name}`)).join('\n');
     screen.render();
   });
+}
+
+// run the parrot ascii with out twitter
+function doTheParrot() {
+  parrotBox.content = getAnsiArt('Hi! You\'re doing great!!!')
+  screen.render();
 }
 
 function doTheTweets() {

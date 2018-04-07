@@ -8,7 +8,7 @@ var client = Asana.Client.create().useBasicAuth(config.asana.api_key);
 function getTasks() {
   var status = config.asana.status.split(',');
   return client.users.me()
-    .then(function(user) {
+    .then(function (user) {
       var userId = user.id;
       var workspace = user.workspaces.filter(workspace => workspace.name === config.asana.workspace)[0];
       return client.tasks.findAll({
@@ -18,7 +18,10 @@ function getTasks() {
         opt_fields: 'id,name,assignee_status,completed'
       });
     })
-    .then(response => response.data)
+    .then(collection => {
+      // get up to 100 tasks.
+      return collection.fetch(100).then(tasks => tasks);
+    })
     .filter(task => status.includes(task.assignee_status));
 }
 
