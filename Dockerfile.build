@@ -1,0 +1,15 @@
+FROM node:alpine
+MAINTAINER Eric Eliseo <eric.eliseo@gmail.com>
+
+RUN apk add --update --repository http://dl-3.alpinelinux.org/alpine/edge/testing --no-cache bash vim gcc g++ make  \
+    openssh-client \
+    git \
+    python \
+  	&& rm -rf /var/cache/apk/*
+
+RUN yarn global add https://github.com/eliseoeric/tiny-care-terminal
+RUN yarn global add git-standup
+
+ENV LANG en_US.UTF-8
+
+ENTRYPOINT exec /usr/local/bin/tiny-care-terminal
