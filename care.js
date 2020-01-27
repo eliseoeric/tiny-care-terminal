@@ -4,18 +4,18 @@ var twitterbot = require(__dirname + '/twitterbot.js');
 var gitbot = require(__dirname + '/gitbot.js');
 var asanabot = require(__dirname + '/asanabot.js');
 var pomodoro = require(__dirname + '/pomodoro.js');
-var ansiArt = require('ansi-art').default;
+var getAnsiArt = require(__dirname + '/ansiart.js');
 
 var path = require('path');
+var resolve = require('resolve-dir');
 var notifier = require('node-notifier');
 var spawn = require('child_process').spawn;
 var shellescape = require('shell-escape');
 var blessed = require('blessed');
 var contrib = require('blessed-contrib');
 var chalk = require('chalk');
-var bunnySay = require('sign-bunny');
-var yosay = require('yosay');
 var weather = require('weather-js');
+var path = require('path');
 
 var inPomodoroMode = false;
 
@@ -157,11 +157,11 @@ function doTheTweets() {
         return;
       }
       twitterbot.getTweet(config.twitter[which]).then(function(tweet) {
-        parrotBox.content = getAnsiArt(tweet.text)
+        parrotBox.content = getAnsiArt(config.say, tweet.text)
         screen.render();
       },function(error) {
         // Just in case we don't have tweets.
-        parrotBox.content = getAnsiArt('Hi! You\'re doing great!!!')
+        parrotBox.content = getAnsiArt(config.say, 'Hi! You\'re doing great!!!')
         screen.render();
       });
     } else {
@@ -181,8 +181,10 @@ function doTheCodes() {
   var todayCommits = 0;
   var weekCommits = 0;
 
-  // show loading message while loading commits
-  todayBox.content = weekBox.content = '⏳ one second please...tiny commit bot is looking for tiny commits! ⏳';
+  // show loading message while loading commits.
+  // Turns out blessed doesn't love it if there's emoji in this or if
+  // the line is super long.
+  todayBox.content = weekBox.content = 'tiny commit bot is looking for tiny commits! ';
   screen.render();
 
   function getCommits(data, box) {
@@ -229,7 +231,6 @@ function makeBox(label) {
       type: 'line'  // or bg
     },
     style: {
-      fg: 'white',
       border: { fg: 'cyan' },
       hover: { border: { fg: 'green' }, }
     }
@@ -253,6 +254,7 @@ function makeGraphBox(label) {
   options.barWidth= 5;
   options.xOffset= 4;
   options.maxHeight= 10;
+  options.labelColor = 'normal';
   return options;
 }
 
@@ -291,6 +293,7 @@ function colorizeLog(text) {
 
 function formatRepoName(line, divider) {
   var repoPath = config.repos
+    .map(resolve)
     .sort((a, b) => a.length < b.length) // Longest repo repoPath first
     .find(repo => line.startsWith(repo));
   var repoRootPath = chalk.yellow(path.basename(repoPath) + divider);
@@ -298,57 +301,6 @@ function formatRepoName(line, divider) {
     line.replace(repoPath, '').replace(new RegExp(`^${divider}`), '')
   );
   return `\n${repoRootPath}${repoChildPath}`;
-}
-
-function llamaSay(text) {
-  return `
-    ${text}
-    ∩∩
-　（･ω･）
-　　│ │
-　　│ └─┐○
-　  ヽ　　　丿
-　　 　∥￣∥`;
-}
-
-function catSay(text) {
-  return `
-      ${text}
-
-      ♪ ガンバレ! ♪
-  ミ ゛ミ ∧＿∧ ミ゛ミ
-  ミ ミ ( ・∀・ )ミ゛ミ
-   ゛゛ ＼　　　／゛゛
-   　　 　i⌒ヽ ｜
-  　　 　 (＿) ノ
-   　　　　　 ∪`
-    ;
-}
-
-function getAnsiArt(textToSay) {
-  var artFileRegex = /.ansi$/;
-
-  // If config.say is custom art file path, then return custom art
-  if (artFileRegex.test(config.say)) {
-    return ansiArt.get({ filePath: config.say, speechText: textToSay });
-  }
-
-  var ansiOptions = {
-    artName: config.say,
-    speechText: textToSay,
-    speechBubbleOptions: {
-      boxWidth: parrotBox.width < 70 ? parrotBox.width - 4 : parrotBox.width * 0.7,
-      boxType: 'classic'
-    }
-  };
-
-  switch (config.say) {
-    case 'bunny' : return bunnySay(textToSay);
-    case 'llama' : return llamaSay(textToSay);
-    case 'cat'   : return catSay(textToSay);
-    case 'yeoman': return yosay(textToSay);
-    default : return ansiArt.get(ansiOptions);
-  }
 }
 
 var pomodoroHandlers = {
@@ -368,7 +320,7 @@ var pomodoroHandlers = {
     var content = `In Pomodoro Mode: ${remainingTime} ${statusText}`;
     var metaData = `Duration: ${pomodoroObject.getRunningDuration()} Minutes,  Break Time: ${pomodoroObject.getBreakDuration()} Minutes\n`;
     metaData += 'commands: \n s - start/pause/resume \n e - stop \n u - update duration \n b - update break time';
-    parrotBox.content = getAnsiArt(content) + metaData;
+    parrotBox.content = getAnsiArt(config.say, content) + metaData;
     screen.render();
   },
 
