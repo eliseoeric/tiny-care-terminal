@@ -1,19 +1,28 @@
 const resolve = require('resolve-dir');
 const subdirs = require('subdirs');
 const isGit = require('is-git');
-const gitlog = require('gitlog');
-const path = require('path');
+const chalk = require('chalk');
+const gitlog = require('gitlog').default;
 const async = require("async");
-const git = require('git-utils');
+const { exec } = require("child_process");
 
-try {
-  const gitUsername = require('git-user-name')();
-} catch(err) {
-  console.error(`ERROR reading git-config.
+function craftGetGitUserErrorMessage(error, stdout) {
+  return `ERROR reading git-config.
     Use e.g. 'git config --global user.name "Mona Lisa"'.
     See 'man git config' for further information.
-  `);
-  return process.exit(0);
+    \n${error.message}\n${stdout}\n`;
+}
+
+async function getGitUser() {
+  return new Promise((resolvePromise, rejectPromise) => {
+    exec('git config --get user.name', (error, stdout) => {
+      if (error || stdout.trim() === '') {
+        rejectPromise(craftGetGitUserErrorMessage(error, stdout));
+        return;
+      }
+      resolvePromise(stdout.trim());
+    });
+  });
 }
 
 /**
@@ -58,16 +67,17 @@ function findGitRepos(repos, depth, callback) {
  * returns all commits of the last given `days`.
  * Calls `callback` with line-seperated-strings of the formatted commits.
  */
-function getCommitsFromRepos(repos, days, callback) {
+async function getCommitsFromRepos(repos, days, callback) {
   let cmts = [];
+  let errs = [];
+  let gitUser;
+  try {
+    gitUser = await getGitUser();
+  } catch( error ) {
+    callback(error);
+    return;
+  }
   async.each(repos, (repo, repoDone) => {
-    let localGitUsername = '';
-    try {
-      const gitUtilsRepo = git.open(repo);
-      localGitUsername = gitUtilsRepo.getConfigValue('user.name') || gitUsername;
-    } catch (err) {
-      localGitUsername = gitUsername;
-    }
     try {
       gitlog({
         repo: repo,
@@ -75,12 +85,14 @@ function getCommitsFromRepos(repos, days, callback) {
         number: 100, //max commit count
         since: `${days} days ago`,
         fields: ['abbrevHash', 'subject', 'authorDateRel', 'authorName'],
-        author: localGitUsername
+        author: gitUser
       }, (err, logs) => {
         // Error
         if (err) {
-          callback(`Oh noes😱\nThe repo ${repo} has failed:\n${err}`, null);
+          errs.push(`${chalk.red('Oh noes 😱 :')} Getting commits from repo "${repo}" has failed: ${err.message || err}`);
+          return repoDone();
         }
+
         // Find user commits
         let commits = [];
         logs.forEach(c => {
@@ -102,7 +114,9 @@ function getCommitsFromRepos(repos, days, callback) {
       callback(err, null);
     }
   }, err => {
-    callback(err, cmts.length > 0 ? cmts.join('\n') : "Nothing yet. Start small!");
+    const errors = errs.length > 0 ? errs.join('\n\n') : null;
+    const commits = cmts.length > 0 ? cmts.join('\n') : "Nothing yet. Start small!";
+    callback(err, errors ? [errors, commits].join('\n') : commits);
   });
 }
 

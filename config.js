@@ -40,7 +40,7 @@ var config = {
 
   asana: {
     api_key: process.env.ASANA_API_KEY || 'none',
-    workspace: process.env.ASANA_WORKSPACE || 'none',
+    workspaces: (process.env.ASANA_WORKSPACES || 'none').split(',').map(s => s.trim()),
     status: process.env.ASANA_STATUS || 'today',
   },
 

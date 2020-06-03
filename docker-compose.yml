@@ -7,8 +7,27 @@ services:
       disable: true
     volumes:
       - .:/app
+      - ../uma:/repos
     tty: true
     environment:
-     ASANA_WORKSPACE:
-     ASANA_STATUS:
-     ASANA_API_KEY:
+      TTC_SAY_BOX:
+      TTC_REPOS:
+      TTC_REPOS_DEPTH:
+      TTC_WEATHER:
+      TTC_CELSIUS:
+      TTC_APIKEYS:
+      TTC_UPDATE_INTERVAL:
+      TTC_TERMINAL_TITLE:
+      TTC_CONSUMER_KEY:
+      TTC_CONSUMER_SECRET:
+      TTC_ACCESS_TOKEN:
+      TTC_ACCESS_TOKEN_SECRET:
+      CONSUMER_KEY:
+      CONSUMER_SECRET:
+      ACCESS_TOKEN:
+      ACCESS_TOKEN_SECRET:
+      TTC_POMODORO:
+      TTC_BREAK:
+      ASANA_WORKSPACES:
+      ASANA_STATUS:
+      ASANA_API_KEY:

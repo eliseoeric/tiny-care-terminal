@@ -2,15 +2,13 @@
 var config = require(__dirname + '/config.js');
 var twitterbot = require(__dirname + '/twitterbot.js');
 var gitbot = require(__dirname + '/gitbot.js');
-var asanabot = require(__dirname + '/asanabot.js');
 var pomodoro = require(__dirname + '/pomodoro.js');
 var getAnsiArt = require(__dirname + '/ansiart.js');
+var asanabot = require(__dirname + '/asanabot.js');
 
 var path = require('path');
 var resolve = require('resolve-dir');
 var notifier = require('node-notifier');
-var spawn = require('child_process').spawn;
-var shellescape = require('shell-escape');
 var blessed = require('blessed');
 var contrib = require('blessed-contrib');
 var chalk = require('chalk');
@@ -19,12 +17,12 @@ var path = require('path');
 
 var inPomodoroMode = false;
 
-var screen = blessed.screen(
-    {fullUnicode: true, // emoji or bust
-     smartCSR: true,
-     autoPadding: true,
-     title: config.terminal_title
-    });
+var screen = blessed.screen({
+  fullUnicode: true, // emoji or bust
+  smartCSR: true,
+  autoPadding: true,
+  title: config.terminal_title
+});
 
 // Quit on Escape, q, or Control-C.
 screen.key(['escape', 'q', 'C-c'], function(ch, key) {
@@ -75,7 +73,6 @@ screen.key(['p', 'C-p'], function(ch, key) {
     pomodoroObject.stop();
     inPomodoroMode = false;
     // doTheTweets();
-    doTheTasks();
     parrotBox.removeLabel('');
   } else {
     parrotBox.setLabel(' 🍅 ');
@@ -97,16 +94,17 @@ var parrotBox = grid.set(6, 8, 6, 4, blessed.box, makeScrollBox(''));
 // tweetBoxes[config.twitter[1]] = grid.set(2, 8, 2, 4, blessed.box, makeBox(' 💖 '));
 // tweetBoxes[config.twitter[2]] = grid.set(4, 8, 2, 4, blessed.box, makeBox(' 💬 '));
 
-var asanaBox = grid.set(2, 6, 4, 6, blessed.box, makeScrollBox(' Asana Tasks '));
+// var asanaBox = grid.set(2, 6, 4, 6, blessed.box, makeScrollBox(' Asana Tasks '));
+var asanaBox = grid.set(2, 6, 4, 6, contrib.table, makeScrollList(' Asana Tasks '));
 
 tick();
 setInterval(tick, 1000 * 60 * config.updateInterval);
 
 function tick() {
   doTheWeather();
-  doTheTasks();
-  doTheParrot();
+  // doTheTweets();
   doTheCodes();
+  doTheTasks();
 }
 
 function doTheWeather() {
@@ -133,20 +131,27 @@ function doTheWeather() {
 }
 
 function doTheTasks() {
+
   // show loading message while loading commits
   asanaBox.content = '⏳ one second please...tiny asana bot is looking for tiny tasks! ⏳';
   screen.render();
 
-  asanabot.getTasks().then(function(list) {
-    asanaBox.content = list.map(item => (`- ${item.name}`)).join('\n');
+  asanaBox.focus();
+
+  // asanabot.getTasks();
+  asanabot.getTasks().then(function(workspaces) {
+    var items = workspaces.map(workspace => {
+      return workspace.tasks.map(task => [task.name, workspace.workspace, ''])
+    }).flat()
+    var headers = ['task', 'workspace', 'status'];
+    
+    asanaBox.setData({
+      headers,
+      data: items
+    });
+    
     screen.render();
   });
-}
-
-// run the parrot ascii with out twitter
-function doTheParrot() {
-  parrotBox.content = getAnsiArt('Hi! You\'re doing great!!!')
-  screen.render();
 }
 
 function doTheTweets() {
@@ -194,26 +199,22 @@ function doTheCodes() {
     return (box && box.content) ? (box.content.match(commitRegex) || []).length : '0';
   }
 
+  function showError(err) {
+    todayBox.content = 'ERROR: ' + (err.message || err);
+    return screen.render();
+  }
+
   gitbot.findGitRepos(config.repos, config.depth-1, (err, allRepos) => {
-    if (err) {
-      return todayBox.content = err;
-      screen.render();
-    }
+    if (err) return showError(err);
     gitbot.getCommitsFromRepos(allRepos, 1, (err, data) => {
-      if (err) {
-        return todayBox.content = err;
-        screen.render();
-      }
+      if (err) return showError(err);
       todayBox.content = '';
       todayCommits = getCommits(`${data}`, todayBox);
       updateCommitsGraph(todayCommits, weekCommits);
       screen.render();
     });
     gitbot.getCommitsFromRepos(allRepos, 7, (err, data) => {
-      if (err) {
-        return weekBox.content = err;
-        screen.render();
-      }
+      if (err) return showError(err);
       weekBox.content = '';
       weekCommits = getCommits(`${data}`, weekBox);
       updateCommitsGraph(todayCommits, weekCommits);
@@ -246,6 +247,17 @@ function makeScrollBox(label) {
   options.vi = true;
   options.alwaysScroll = true;
   options.mouse = true;
+  return options;
+}
+
+function makeScrollList(label) {
+  var options = makeBox(label);
+  options.fg = 'white';
+  options.interactive = true;
+  options.border = {type: "line", fg: "cyan"};
+  options.width = '50%';
+  options.columnSpacing = 10;
+  options.columnWidth = [80, 20, 12];
   return options;
 }
 
@@ -284,7 +296,7 @@ function colorizeLog(text) {
       var matches = lines[i].match(regex);
       if (matches) {
         lines[i] = chalk.red(matches[1]) + ' ' + matches[2] + ' ' +
-            chalk.green(matches[3])
+          chalk.green(matches[3])
       }
     }
   }
