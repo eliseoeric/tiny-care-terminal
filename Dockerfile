@@ -8,3 +8,5 @@ RUN apk add --update --repository http://dl-3.alpinelinux.org/alpine/edge/testin
   	&& rm -rf /var/cache/apk/*
 
 ENV LANG en_US.UTF-8
+
+WORKDIR /app

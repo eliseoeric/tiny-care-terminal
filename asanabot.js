@@ -1,28 +1,49 @@
-var Asana = require('asana');
-var util = require('util');
-var config = require(__dirname + '/config.js');
+var Asana = require("asana");
+var util = require("util");
+var config = require(__dirname + "/config.js");
 
 // Here we are using the API key for basic auth - todo switch to Oauth
+
 var client = Asana.Client.create().useBasicAuth(config.asana.api_key);
 
-function getTasks() {
-  var status = config.asana.status.split(',');
-  return client.users.me()
-    .then(function (user) {
-      var userId = user.id;
-      var workspace = user.workspaces.filter(workspace => workspace.name === config.asana.workspace)[0];
-      return client.tasks.findAll({
-        assignee: userId,
-        workspace: workspace.id,
-        completed_since: 'now',
-        opt_fields: 'id,name,assignee_status,completed'
-      });
+function getWorkspaces(user) {
+  return user.workspaces.filter((workspace) =>
+    config.asana.workspaces.includes(workspace.name)
+  );
+}
+
+function getUser() {
+  return client.users.me();
+}
+
+async function workspaceTasks(workspace, userId) {
+  return client.tasks
+    .findAll({
+      assignee: userId,
+      workspace: workspace.gid,
+      completed_since: "now",
+      opt_fields: "id,name,assignee_status,completed",
     })
-    .then(collection => {
-      // get up to 100 tasks.
-      return collection.fetch(100).then(tasks => tasks);
+    .then((collection) => {
+      return collection.fetch(20).then((tasks) => tasks);
+    }).then(tasks => {
+      return {
+        workspace: workspace.name,
+        gid: workspace.gid,
+        tasks: tasks
+      }
     })
-    .filter(task => status.includes(task.assignee_status));
+    .catch((error) => console.error(error.value));
+}
+
+async function getTasks() {
+  var status = config.asana.status.split(",");
+  var user = await getUser();
+  var workspaces = getWorkspaces(user);
+
+  return Promise.all(
+    workspaces.map((workspace) => workspaceTasks(workspace, user.gid))
+  );
 }
 
 module.exports.getTasks = getTasks;
