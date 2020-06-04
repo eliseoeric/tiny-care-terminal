@@ -13,9 +13,10 @@ var blessed = require('blessed');
 var contrib = require('blessed-contrib');
 var chalk = require('chalk');
 var weather = require('weather-js');
-var path = require('path');
+var openBrowser = require("opn");
 
 var inPomodoroMode = false;
+var asanaTasks = [];
 
 var screen = blessed.screen({
   fullUnicode: true, // emoji or bust
@@ -84,18 +85,23 @@ screen.key(['p', 'C-p'], function(ch, key) {
 var grid = new contrib.grid({rows: 12, cols: 12, screen: screen});
 
 // grid.set(row, col, rowSpan, colSpan, obj, opts)
-var weatherBox = grid.set(0, 6, 2, 6, blessed.box, makeScrollBox(' 🌤 '));
+var weatherBox = grid.set(6, 8, 2, 4, blessed.box, makeScrollBox(' 🌤 '));
 var todayBox = grid.set(0, 0, 6, 6, blessed.box, makeScrollBox(' 📝  Last 24 hours '));
 var weekBox = grid.set(6, 0, 6, 6, blessed.box, makeScrollBox(' 📝  Week '));
 var commits = grid.set(6, 6, 6, 2, contrib.bar, makeGraphBox('Commits'));
-var parrotBox = grid.set(6, 8, 6, 4, blessed.box, makeScrollBox(''));
+var parrotBox = grid.set(8, 8, 4, 4, blessed.box, makeScrollBox(''));
 
 // var tweetBoxes = {}
 // tweetBoxes[config.twitter[1]] = grid.set(2, 8, 2, 4, blessed.box, makeBox(' 💖 '));
 // tweetBoxes[config.twitter[2]] = grid.set(4, 8, 2, 4, blessed.box, makeBox(' 💬 '));
 
-// var asanaBox = grid.set(2, 6, 4, 6, blessed.box, makeScrollBox(' Asana Tasks '));
-var asanaBox = grid.set(2, 6, 4, 6, contrib.table, makeScrollList(' Asana Tasks '));
+var asanaBox = grid.set(0, 6, 6, 6, blessed.listtable, makeListTable(' Asana Tasks ', 'left',  0, true)); 
+
+asanaBox.on('select', (data, index) => {
+  var selectedTask = asanaTasks[index - 1];
+  var project = selectedTask.projects[0];
+  openBrowser(`https://app.asana.com/0/${project.gid}/${selectedTask.gid}`);
+});
 
 tick();
 setInterval(tick, 1000 * 60 * config.updateInterval);
@@ -133,24 +139,25 @@ function doTheWeather() {
 function doTheTasks() {
 
   // show loading message while loading commits
-  asanaBox.content = '⏳ one second please...tiny asana bot is looking for tiny tasks! ⏳';
+  asanaBox.content = 'one second please...tiny asana bot is looking for tiny tasks!';
   screen.render();
 
-  asanaBox.focus();
-
-  // asanabot.getTasks();
+  
   asanabot.getTasks().then(function(workspaces) {
-    var items = workspaces.map(workspace => {
-      return workspace.tasks.map(task => [task.name, workspace.workspace, ''])
-    }).flat()
+    asanaBox.content = '';
+
+    asanaTasks = workspaces.flat();
+
+    var rows = asanaTasks.map(task => [task.name, task.workspace.name, task.assignee_status])
     var headers = ['task', 'workspace', 'status'];
     
-    asanaBox.setData({
+    asanaBox.setData([
       headers,
-      data: items
-    });
-    
+      ...rows
+    ])
+
     screen.render();
+    asanaBox.focus();
   });
 }
 
@@ -250,15 +257,35 @@ function makeScrollBox(label) {
   return options;
 }
 
-function makeScrollList(label) {
-  var options = makeBox(label);
-  options.fg = 'white';
-  options.interactive = true;
-  options.border = {type: "line", fg: "cyan"};
-  options.width = '50%';
-  options.columnSpacing = 10;
-  options.columnWidth = [80, 20, 12];
-  return options;
+function makeListTable(label, alignment, padding, isInteractive = false) {
+  return {
+    parent: screen,
+    keys: true,
+    label: label,
+    align: alignment,
+    selectedFg: "white",
+    selectedBg: "blue",
+    interactive: isInteractive, // Makes the list table scrollable
+    padding: padding,
+    mouse: true,
+    dockBorders: true,
+    style: {
+      fg: 'white',
+      border: { fg: 'cyan' },
+      hover: { border: { fg: 'green' }, },
+      cell: {
+        selected: {
+          fg: "black",
+          bg: "cyan"
+        }
+      },
+      header: {
+        fg: "red",
+        bold: true
+      }
+    },
+    columnSpacing: 1
+  };
 }
 
 function makeGraphBox(label) {
