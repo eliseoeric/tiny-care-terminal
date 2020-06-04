@@ -27,6 +27,7 @@
     "is-git": "^1.0.0",
     "neo-blessed": "^0.2.0",
     "node-notifier": "^7.0.0",
+    "opn": "^6.0.0",
     "request": "^2.88.2",
     "resolve-dir": "^1.0.1",
     "shell-escape": "^0.2.0",
@@ -37,6 +38,7 @@
     "yosay": "^2.0.2"
   },
   "scripts": {
-    "start": "node care.js"
+    "start": "node care.js",
+    "debug": "node --inspect --inspect-brk care.js"
   }
 }

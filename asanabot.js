@@ -22,16 +22,17 @@ async function workspaceTasks(workspace, userId) {
       assignee: userId,
       workspace: workspace.gid,
       completed_since: "now",
-      opt_fields: "id,name,assignee_status,completed",
+      opt_fields: "id,name,assignee_status,completed,projects",
     })
-    .then((collection) => {
-      return collection.fetch(20).then((tasks) => tasks);
-    }).then(tasks => {
-      return {
-        workspace: workspace.name,
-        gid: workspace.gid,
-        tasks: tasks
-      }
+    .then((collection) => collection.fetch(25))
+    .then((tasks) => {
+
+      return tasks.map(task => {
+        return {
+          ...task,
+          workspace,
+        }
+      })
     })
     .catch((error) => console.error(error.value));
 }
