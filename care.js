@@ -99,8 +99,16 @@ var asanaBox = grid.set(0, 6, 6, 6, blessed.listtable, makeListTable(' Asana Tas
 
 asanaBox.on('select', (data, index) => {
   var selectedTask = asanaTasks[index - 1];
-  var project = selectedTask.projects[0];
-  openBrowser(`https://app.asana.com/0/${project.gid}/${selectedTask.gid}`);
+  var { workspace, projects } = selectedTask;
+
+  if (projects[0] && projects[0].gid) {
+    openBrowser(`https://app.asana.com/0/${projects[0].gid}/${selectedTask.gid}`);
+  }
+
+  if  (workspace && workspace.gid) {
+    openBrowser(`https://app.asana.com/0/${workspace.gid}/${selectedTask.gid}`);
+  } 
+  
 });
 
 tick();
